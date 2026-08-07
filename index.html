@@ -185,9 +185,18 @@
   .remaining-cell.low{color:var(--warn);}
   .remaining-cell.empty{color:var(--danger);font-weight:500;}
   .entry-list{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px;}
-  .entry-row{display:flex;align-items:center;gap:6px;}
-  .entry-row .entry-qty{width:56px;text-align:center;}
-  .entry-row .entry-op{flex:1;min-width:100px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .entry-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 0;}
+  .qty-stepper{display:inline-flex;align-items:center;gap:2px;background:var(--paper);border:1px solid var(--line-strong);border-radius:999px;padding:3px;flex:none;}
+  .qty-stepper .icon-btn{width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--line);}
+  .qty-stepper .icon-btn:hover{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent);}
+  .qty-stepper .entry-qty{width:46px;text-align:center;border:none;background:transparent;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;padding:0;}
+  .qty-stepper .entry-qty:focus{outline:none;}
+  .op-field{position:relative;flex:1 1 180px;min-width:150px;display:flex;align-items:center;}
+  .op-field svg{position:absolute;left:11px;color:var(--ink-faint);pointer-events:none;flex:none;}
+  .op-field .entry-op{width:100%;padding-left:33px;font-family:'IBM Plex Mono',monospace;font-size:13px;border:1px solid var(--line);background:var(--paper);}
+  .op-field .entry-op:focus{background:var(--card);}
+  .entry-row .e-del{flex:none;margin-left:auto;}
+  ::placeholder{color:var(--ink-faint);opacity:1;font-weight:400;}
   .add-entry-btn{margin-top:10px;}
 
   /* Stock */
@@ -274,12 +283,32 @@
 
   @media(max-width:760px){
     .app-shell{flex-direction:column;}
-    .sidebar{width:100%;flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;gap:14px;}
+    .sidebar{width:100%;flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;gap:14px;background:rgba(255,255,255,0.86);}
     .brand{flex:none;}
     nav.navlist{flex-direction:row;gap:4px;}
-    .nav-item{white-space:nowrap;}
+    .nav-item{white-space:nowrap;padding:8px 12px;font-size:12.5px;}
+    .nav-item svg{width:17px;height:17px;}
     .sidebar-foot{display:none;}
-    .content{padding:20px 16px 50px;}
+    .content{padding:16px 12px 50px;}
+    .content-head{flex-direction:column;align-items:flex-start;gap:12px;}
+    .content-head .desc{font-size:12.5px;}
+    .card,.stat-card,.qa-card{padding:13px 14px;}
+    .qa-grid,.stat-grid{gap:9px;}
+    .qa-tag{position:static;margin-top:4px;align-self:flex-start;}
+    .qa-card{flex-wrap:wrap;}
+    .search-wrap .kbd-hint{display:none;}
+    .search-wrap input{width:100%;}
+    .filter-bar{gap:6px;}
+    .pill-btn{padding:6px 10px;font-size:12px;}
+    .entry-row{gap:8px;}
+    .op-field{min-width:120px;}
+    table.sheet{font-size:12px;}
+    .modal-card{width:94vw;padding:20px;}
+  }
+  @media(max-width:420px){
+    .qty-stepper .entry-qty{width:36px;}
+    .entry-row .e-del{margin-left:0;}
+    .op-field{flex:1 1 100%;order:3;}
   }
   @media print{
     .sidebar,.content-head .desc,.filter-bar,.add-form,.actions,.restock-row,.batch-toggle{display:none !important;}
@@ -287,29 +316,62 @@
     .card{box-shadow:none;border:none;}
   }
 
-  /* Auth screen — unified with the main app's clinical design system
-     (same tokens, no separate palette), with its own glow signature. */
+  /* Auth screen — cinematic split layout: a bold gradient "hero" panel
+     paired with a clean, focused form panel. Same design tokens as the
+     rest of the app, just turned up for a strong first impression. */
   #authScreen{
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;
     background:
-      radial-gradient(1000px 560px at 50% -12%, rgba(79,70,229,0.10), transparent 60%),
-      radial-gradient(700px 420px at 100% 100%, rgba(13,156,143,0.10), transparent 55%),
+      radial-gradient(1100px 620px at 50% -14%, rgba(79,70,229,0.10), transparent 60%),
+      radial-gradient(760px 460px at 100% 100%, rgba(13,156,143,0.10), transparent 55%),
       var(--paper);
   }
   #authScreen button.btn{border-radius:999px;}
   #authScreen input[type=text],#authScreen input[type=email],#authScreen input[type=password]{border-radius:14px;}
-  .auth-card{position:relative;width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-lift);padding:30px 28px;}
-  .auth-card::before{content:'';position:absolute;top:0;left:24px;right:24px;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
-  .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+
+  .auth-shell{
+    position:relative;width:100%;max-width:960px;min-height:600px;display:flex;
+    background:var(--card);border-radius:26px;box-shadow:var(--shadow-lift);overflow:hidden;
+    animation:authIn .55s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes authIn{from{opacity:0;transform:translateY(14px) scale(0.985);}to{opacity:1;transform:none;}}
+
+  .auth-hero{
+    flex:1 1 45%;position:relative;overflow:hidden;padding:44px 42px;color:#fff;
+    display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(160deg,#0EA99A 0%,#0B7A6F 42%,#4638D6 100%);
+  }
+  .auth-hero::before,.auth-hero::after{content:'';position:absolute;border-radius:50%;filter:blur(2px);opacity:0.5;}
+  .auth-hero::before{width:280px;height:280px;background:radial-gradient(circle,rgba(255,255,255,0.22),transparent 70%);top:-90px;right:-80px;animation:authFloat1 9s ease-in-out infinite;}
+  .auth-hero::after{width:220px;height:220px;background:radial-gradient(circle,rgba(255,255,255,0.16),transparent 70%);bottom:-70px;left:-60px;animation:authFloat2 11s ease-in-out infinite;}
+  @keyframes authFloat1{0%,100%{transform:translate(0,0);}50%{transform:translate(-14px,16px);}}
+  @keyframes authFloat2{0%,100%{transform:translate(0,0);}50%{transform:translate(12px,-14px);}}
+  .auth-hero .hero-mark{position:relative;width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,0.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;margin-bottom:26px;}
+  .auth-hero .hero-mark svg{width:22px;height:22px;stroke:#fff;}
+  .auth-hero h2{position:relative;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:29px;line-height:1.18;margin:0 0 10px;letter-spacing:-0.01em;}
+  .auth-hero p.hero-tag{position:relative;font-size:13.5px;line-height:1.6;opacity:0.88;max-width:300px;margin:0;}
+  .hero-features{position:relative;display:flex;flex-direction:column;gap:15px;margin-top:32px;}
+  .hero-feature{display:flex;align-items:center;gap:11px;font-size:13px;opacity:0.94;}
+  .hero-feature .fic{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex:none;}
+  .hero-feature .fic svg{width:15px;height:15px;stroke:#fff;}
+  .hero-foot{position:relative;font-size:11px;opacity:0.62;letter-spacing:0.02em;}
+
+  .auth-card{position:relative;flex:1 1 55%;width:auto;max-width:none;background:var(--card);border:none;border-radius:0;box-shadow:none;padding:46px 46px;display:flex;flex-direction:column;justify-content:center;}
+  .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
   .auth-brand .mark{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 12px rgba(13,156,143,0.28);display:flex;align-items:center;justify-content:center;flex:none;}
   .auth-brand .mark svg{width:17px;height:17px;stroke:#fff;}
   .auth-brand h1{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;margin:0;}
-  .auth-tabs{display:flex;gap:2px;margin-bottom:18px;background:var(--paper);border-radius:999px;padding:3px;}
-  .auth-tab{flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:7px 4px;border-radius:999px;border:none;background:transparent;color:var(--ink-soft);cursor:pointer;}
+  .auth-tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--paper);border-radius:999px;padding:3px;}
+  .auth-tab{flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:8px 4px;border-radius:999px;border:none;background:transparent;color:var(--ink-soft);cursor:pointer;transition:background .15s ease,color .15s ease;}
   .auth-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow);}
-  .auth-field{margin-bottom:12px;}
-  .auth-field input{width:100%;}
-  .auth-submit{width:100%;justify-content:center;margin-top:4px;}
+  .auth-field{margin-bottom:13px;}
+  .auth-field .field-label{display:block;margin-bottom:5px;}
+  .field-icon-wrap{position:relative;}
+  .field-icon-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--ink-faint);pointer-events:none;}
+  .field-icon-wrap input{width:100%;padding-left:37px;}
+  .auth-submit{width:100%;justify-content:center;margin-top:6px;position:relative;overflow:hidden;}
+  .auth-submit::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(115deg,transparent,rgba(255,255,255,0.35),transparent);transform:skewX(-18deg);transition:left .5s ease;}
+  .auth-submit:hover::after{left:130%;}
   .auth-error{background:var(--danger-soft);color:var(--danger);font-size:12.5px;padding:8px 10px;border-radius:12px;margin-bottom:12px;display:none;}
   .auth-error.show{display:block;}
   .join-code-box{background:var(--accent-soft);color:var(--accent-ink);border-radius:14px;padding:12px;text-align:center;margin-bottom:14px;}
@@ -318,34 +380,72 @@
   .auth-form.active{display:block;}
   .profile-line{font-size:12px;color:var(--ink-soft);padding:0 6px 10px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .profile-line b{color:var(--ink);}
+  @media(max-width:900px){
+    .auth-hero{display:none;}
+    .auth-shell{max-width:420px;min-height:0;border-radius:22px;}
+    .auth-card{padding:32px 26px;}
+  }
 </style>
 </head>
 <body>
 <div id="authScreen">
-  <div class="auth-card">
-    <div class="auth-brand">
-      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l1 1 1-1a5 5 0 1 1 7 7l-7 7a1 1 0 0 1-1.4 0Z"></path></svg></div>
-      <h1>Medicine Ledger</h1>
+  <div class="auth-shell">
+    <div class="auth-hero">
+      <div>
+        <div class="hero-mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l1 1 1-1a5 5 0 1 1 7 7l-7 7a1 1 0 0 1-1.4 0Z"></path></svg></div>
+        <h2>Precision inventory,<br>for every ward.</h2>
+        <p class="hero-tag">Medicine Ledger keeps your stock, doses, and expiry dates in one clean, always-current record.</p>
+        <div class="hero-features">
+          <div class="hero-feature"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"></path><path d="M3 7.5V16l9 4.5 9-4.5V7.5M12 12v8.5"></path></svg></span>Real-time stock tracking</div>
+          <div class="hero-feature"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg></span>Expiry alerts before it's too late</div>
+          <div class="hero-feature"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.3-4.3"></path></svg></span>Smart search across your ledger</div>
+        </div>
+      </div>
+      <div class="hero-foot">Trusted daily by pharmacy teams to keep patients safe.</div>
     </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-mode="login">Log in</button>
-      <button class="auth-tab" data-mode="create">Sign up</button>
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l1 1 1-1a5 5 0 1 1 7 7l-7 7a1 1 0 0 1-1.4 0Z"></path></svg></div>
+        <h1>Medicine Ledger</h1>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-mode="login">Log in</button>
+        <button class="auth-tab" data-mode="create">Sign up</button>
+      </div>
+      <div class="auth-error" id="authError"></div>
+
+      <form class="auth-form active" id="loginForm">
+        <div class="auth-field"><span class="field-label">Username or email</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"></path></svg>
+            <input type="text" id="loginIdentifier" autocomplete="username" required></div>
+        </div>
+        <div class="auth-field"><span class="field-label">Password</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+            <input type="password" id="loginPassword" autocomplete="current-password" required></div>
+        </div>
+        <button class="btn primary auth-submit" type="submit">Log in</button>
+      </form>
+
+      <form class="auth-form" id="createForm">
+        <div class="auth-field"><span class="field-label">Hospital name</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="1.5"></rect><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"></path></svg>
+            <input type="text" id="createHospital" required></div>
+        </div>
+        <div class="auth-field"><span class="field-label">Username</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"></path></svg>
+            <input type="text" id="createUsername" autocomplete="username" required></div>
+        </div>
+        <div class="auth-field"><span class="field-label">Email</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg>
+            <input type="email" id="createEmail" autocomplete="email" required></div>
+        </div>
+        <div class="auth-field"><span class="field-label">Password</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+            <input type="password" id="createPassword" autocomplete="new-password" required></div>
+        </div>
+        <button class="btn primary auth-submit" type="submit">Create account</button>
+      </form>
     </div>
-    <div class="auth-error" id="authError"></div>
-
-    <form class="auth-form active" id="loginForm">
-      <div class="auth-field"><span class="field-label">Username or email</span><input type="text" id="loginIdentifier" autocomplete="username" required></div>
-      <div class="auth-field"><span class="field-label">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></div>
-      <button class="btn primary auth-submit" type="submit">Log in</button>
-    </form>
-
-    <form class="auth-form" id="createForm">
-      <div class="auth-field"><span class="field-label">Hospital name</span><input type="text" id="createHospital" required></div>
-      <div class="auth-field"><span class="field-label">Username</span><input type="text" id="createUsername" autocomplete="username" required></div>
-      <div class="auth-field"><span class="field-label">Email</span><input type="email" id="createEmail" autocomplete="email" required></div>
-      <div class="auth-field"><span class="field-label">Password</span><input type="password" id="createPassword" autocomplete="new-password" required></div>
-      <button class="btn primary auth-submit" type="submit">Create account</button>
-    </form>
   </div>
 </div>
 
@@ -431,7 +531,8 @@
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     pill: '<rect x="4.5" y="9.5" width="15" height="5" rx="2.5" transform="rotate(-45 12 12)"/><path d="M9.3 14.7 14.7 9.3"/>',
     shieldCheck: '<path d="M12 3.5 4.5 6v6c0 4.5 3 7 7.5 8.5 4.5-1.5 7.5-4 7.5-8.5V6L12 3.5Z"/><path d="m8.8 12.2 2.2 2.2 4.2-4.4"/>',
-    bell: '<path d="M6 8.5a6 6 0 0 1 12 0c0 4.5 1.5 6 2 6.5H4c.5-.5 2-2 2-6.5Z"/><path d="M10 19a2 2 0 0 0 4 0"/>'
+    bell: '<path d="M6 8.5a6 6 0 0 1 12 0c0 4.5 1.5 6 2 6.5H4c.5-.5 2-2 2-6.5Z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+    idCard: '<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><circle cx="8.3" cy="12" r="2"/><path d="M13 10.3h5M13 13.7h3.3"/>'
   };
   function icon(name, size){
     size = size || 15;
@@ -897,10 +998,12 @@
       var rowsForEntries = entries.length ? entries : [{id:'', qty:'', op:''}];
       var entryHtml = rowsForEntries.map(function(en){
         return '<div class="entry-row" data-entry="'+(en.id||'')+'">'+
-          '<button class="icon-btn e-down" type="button" aria-label="Decrease">–</button>'+
-          '<input type="number" step="0.5" min="0" class="entry-qty" value="'+en.qty+'" placeholder="qty">'+
-          '<button class="icon-btn e-up" type="button" aria-label="Increase">+</button>'+
-          '<input type="text" class="entry-op" value="'+escapeHtml(en.op||'')+'" placeholder="OP card # (optional)">'+
+          '<div class="qty-stepper">'+
+            '<button class="icon-btn e-down" type="button" aria-label="Decrease">–</button>'+
+            '<input type="number" step="0.5" min="0" class="entry-qty" value="'+en.qty+'" placeholder="0">'+
+            '<button class="icon-btn e-up" type="button" aria-label="Increase">+</button>'+
+          '</div>'+
+          '<div class="op-field">'+icon('idCard',14)+'<input type="text" class="entry-op" value="'+escapeHtml(en.op||'')+'" placeholder="OP card # (optional)"></div>'+
           '<button class="icon-btn e-del" type="button" aria-label="Remove entry">'+icon('trash',13)+'</button>'+
         '</div>';
       }).join('');
