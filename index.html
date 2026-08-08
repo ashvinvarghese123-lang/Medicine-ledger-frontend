@@ -177,6 +177,16 @@
   .section-title{font-size:14px;font-weight:600;margin:22px 0 8px;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:6px;}
 
   /* Today */
+  .today-summary{margin-bottom:14px;}
+  .ts-total-pill{margin-left:10px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--accent-soft);color:var(--accent-ink);vertical-align:middle;}
+  .ts-empty{font-size:13px;color:var(--ink-faint);padding:4px 0 2px;}
+  .ts-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .ts-h{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);margin-bottom:6px;}
+  .ts-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .ts-row:last-of-type{border-bottom:none;}
+  .ts-name{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ts-qty{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent-ink);flex:none;}
+  .ts-more{font-size:11.5px;color:var(--ink-faint);padding-top:4px;}
   .today-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;align-items:start;}
   .today-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:0;box-shadow:var(--shadow);transition:box-shadow .15s ease,border-color .15s ease;}
   .today-row:hover{box-shadow:var(--shadow-lift);border-color:var(--line-strong);}
@@ -238,7 +248,13 @@
   .pill-btn{font-size:12.5px;font-weight:500;padding:6px 12px;border-radius:20px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);cursor:pointer;}
   .pill-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
   .stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px;}
-  .med-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease;}
+  .med-card{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;}
+  .med-card.selectable{cursor:pointer;}
+  .med-card.selectable:hover{border-color:var(--accent);}
+  .med-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),var(--shadow);}
+  .med-select{position:absolute;top:10px;right:10px;z-index:2;width:22px;height:22px;border-radius:6px;background:var(--card);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;}
+  .med-select input{width:16px;height:16px;margin:0;accent-color:var(--accent);cursor:pointer;}
+  .select-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);color:var(--accent-ink);border-radius:12px;padding:9px 14px;margin-bottom:12px;font-size:13px;font-weight:500;}
   .med-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(27,38,32,0.09);}
   .med-card .cap{height:6px;}
   .med-card .body{padding:14px 16px 16px;}
@@ -330,6 +346,7 @@
     table.sheet{font-size:12px;}
     .modal-card{width:94vw;padding:20px;}
     .today-grid{grid-template-columns:1fr;}
+    .ts-cols{grid-template-columns:1fr;gap:14px;}
   }
   @media(max-width:420px){
     .qty-stepper .entry-qty{width:36px;}
@@ -613,6 +630,8 @@
     month: todayStr().slice(0,7),
     stockFilter: 'all',
     stockSearch: '',
+    stockSelectMode: false,
+    stockSelected: {},
     todaySearch: '',
     openBatches: {}
   };
@@ -1107,12 +1126,54 @@
 
     var emptyResults = '<div class="card" style="grid-column:1 / -1;"><div class="empty-state">'+icon('search',30)+'<div class="t">No match</div><div class="s">Nothing in today\'s list matches "'+escapeHtml(q)+'".</div></div></div>';
 
+    // ---- "At a glance" summary: totals by medicine and by OP card for dateVal ----
+    var byMed = {}, byOp = {}, totalGiven = 0;
+    state.medicines.forEach(function(med){
+      dayEntries(dateVal, med.id).forEach(function(en){
+        var qv = Number(en.qty) || 0;
+        if(qv <= 0) return;
+        totalGiven += qv;
+        if(!byMed[med.id]) byMed[med.id] = {name: med.name, unit: med.unit||'', qty: 0};
+        byMed[med.id].qty += qv;
+        var opKey = (en.op||'').trim() || '— no OP card —';
+        if(!byOp[opKey]) byOp[opKey] = {op: opKey, qty: 0, meds: {}};
+        byOp[opKey].qty += qv;
+        byOp[opKey].meds[med.name] = (byOp[opKey].meds[med.name]||0) + qv;
+      });
+    });
+    var medSummaryList = Object.keys(byMed).map(function(k){ return byMed[k]; }).sort(function(a,b){ return b.qty-a.qty; });
+    var opSummaryList = Object.keys(byOp).map(function(k){ return byOp[k]; }).sort(function(a,b){ return b.qty-a.qty; });
+    var isToday = dateVal === todayStr();
+
+    var summaryHtml;
+    if(totalGiven === 0){
+      summaryHtml = '<div class="card today-summary"><div class="section-title" style="margin-top:0;">'+icon('grid',15)+(isToday?'Today':'Selected day')+' at a glance</div>'+
+        '<div class="ts-empty">Nothing logged yet for this date.</div></div>';
+    }else{
+      var medRows = medSummaryList.slice(0,8).map(function(m){
+        return '<div class="ts-row"><span class="ts-name">'+escapeHtml(m.name)+'</span><span class="ts-qty">'+round(m.qty)+' '+escapeHtml(m.unit)+'</span></div>';
+      }).join('') + (medSummaryList.length>8 ? '<div class="ts-more">+'+(medSummaryList.length-8)+' more</div>' : '');
+      var opRows = opSummaryList.slice(0,8).map(function(o){
+        var medBits = Object.keys(o.meds).map(function(n){ return n+' × '+round(o.meds[n]); }).join(', ');
+        return '<div class="ts-row" title="'+escapeHtml(medBits)+'"><span class="ts-name">'+escapeHtml(o.op)+'</span><span class="ts-qty">'+round(o.qty)+'</span></div>';
+      }).join('') + (opSummaryList.length>8 ? '<div class="ts-more">+'+(opSummaryList.length-8)+' more</div>' : '');
+      summaryHtml =
+        '<div class="card today-summary">'+
+          '<div class="section-title" style="margin-top:0;">'+icon('grid',15)+(isToday?'Today':'Selected day')+' at a glance<span class="ts-total-pill">'+round(totalGiven)+' total given</span></div>'+
+          '<div class="ts-cols">'+
+            '<div class="ts-col"><div class="ts-h">By medicine</div>'+medRows+'</div>'+
+            '<div class="ts-col"><div class="ts-h">By OP card</div>'+opRows+'</div>'+
+          '</div>'+
+        '</div>';
+    }
+
     panel.innerHTML =
       '<div class="content-head"><div><h2>Today</h2><div class="desc">Log doses — split by OP card number when more than one patient gets the same medicine</div></div>'+
       '<div class="row" style="gap:14px;align-items:flex-end;">'+
         '<div><span class="field-label">Date</span><input type="date" id="todayDateInput" value="'+dateVal+'"></div>'+
         '<button class="btn" id="exportTodayBtn" type="button">'+icon('download',14)+'Export today (Excel)</button>'+
       '</div></div>'+
+      summaryHtml+
       '<div class="filter-bar" style="margin-top:0;">'+
         '<span class="search-wrap'+(q?' has-value':'')+'">'+icon('search',14)+
           '<input type="text" id="todaySearch" placeholder="Search today\'s medicines…" value="'+escapeHtml(state.todaySearch)+'">'+
@@ -1183,6 +1244,37 @@
 
   // ---------- STOCK ----------
 
+  var MONTH_WORDS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+  function monthFromWord(w){
+    var key = String(w||'').toLowerCase().slice(0,4);
+    if(MONTH_WORDS[key]!==undefined) return MONTH_WORDS[key];
+    return MONTH_WORDS[key.slice(0,3)] !== undefined ? MONTH_WORDS[key.slice(0,3)] : null;
+  }
+  function twoDigitYear(yy){ return 2000 + Number(yy); } // stock/expiry dates here are always 2000s+
+
+  // Common unit abbreviations, normalized for consistent display when we
+  // auto-detect the unit from a mixed cell like "500ml" or "10 Nos".
+  var UNIT_ALIASES = {
+    ml:'ml', mls:'ml', millilitre:'ml', milliliter:'ml',
+    l:'l', ltr:'l', litre:'l', liter:'l',
+    kg:'kg', kgs:'kg',
+    g:'g', gm:'g', gms:'g', gram:'g', grams:'g',
+    mg:'mg', mgs:'mg',
+    nos:'nos', no:'nos', num:'nos', nums:'nos', pcs:'nos', pc:'nos', piece:'nos', pieces:'nos', unit:'nos', units:'nos',
+    tab:'tablets', tabs:'tablets', tablet:'tablets', tablets:'tablets',
+    cap:'capsules', caps:'capsules', capsule:'capsules', capsules:'capsules',
+    vial:'vials', vials:'vials',
+    amp:'ampoules', amps:'ampoules', ampoule:'ampoules', ampoules:'ampoules',
+    bottle:'bottles', bottles:'bottles', btl:'bottles',
+    strip:'strips', strips:'strips',
+    box:'boxes', boxes:'boxes',
+    tube:'tubes', tubes:'tubes'
+  };
+  function normalizeUnit(u){
+    var key = String(u||'').toLowerCase().trim();
+    return UNIT_ALIASES[key] || key;
+  }
+
   function parseImportRow(row){
     var keys = Object.keys(row);
     function find(cands){
@@ -1208,8 +1300,21 @@
     var qtyRaw = find(['quantity','qty','stock','total','starting stock','current stock']);
     var qty = null; // null = "not in the sheet at all" — distinct from an explicit 0
     if(qtyRaw !== undefined && qtyRaw !== ''){
-      var qtyNum = Number(String(qtyRaw).replace(/,/g,'').trim());
-      if(!isNaN(qtyNum)) qty = qtyNum;
+      var qtyStr = String(qtyRaw).trim();
+      // Smart unit extraction from a mixed cell like "500ml", "2 Kg", "10Nos" —
+      // only kicks in when there's no separate Unit column and no unit from the name yet.
+      var qtyUnitMatch = qtyStr.match(/^([\d,.]+)\s*([a-zA-Z]+)\.?$/);
+      if(qtyUnitMatch){
+        var qtyNum1 = Number(qtyUnitMatch[1].replace(/,/g,''));
+        if(!isNaN(qtyNum1)){
+          qty = qtyNum1;
+          if(!unit) unit = normalizeUnit(qtyUnitMatch[2]);
+        }
+      }
+      if(qty === null){
+        var qtyNum2 = Number(qtyStr.replace(/,/g,''));
+        if(!isNaN(qtyNum2)) qty = qtyNum2;
+      }
     }
 
     var reorderRaw = find(['reorder level','reorder','low stock alert','low stock alert at','alert level','minimum stock','min stock']);
@@ -1232,12 +1337,28 @@
         }catch(e){}
       }else{
         var s = String(expiryRaw).trim();
-        var mmYYYY = s.match(/^(\d{1,2})[\/\-](\d{4})$/);   // "01/2027" or "01-2027"
-        var yyyyMM = s.match(/^(\d{4})[\/\-](\d{1,2})$/);   // "2027-01" or "2027/01"
+        var mmYYYY = s.match(/^(\d{1,2})[\/\-\s](\d{4})$/);         // "01/2027" or "01-2027"
+        var yyyyMM = s.match(/^(\d{4})[\/\-\s](\d{1,2})$/);         // "2027-01" or "2027/01"
+        // Pharma expiry dates are month+year only (no day) — so a bare 2-digit
+        // number next to a month name is the YEAR, not a day: "MAR-28" and
+        // "28-MAR" both mean March 2028, either order, with or without a separator.
+        var monYY   = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{2})$/);
+        var yyMon   = s.match(/^(\d{2})[\s\-\/]?([A-Za-z]{3,9})$/);
+        var monYYYY = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{4})$/);
+        var yyyyMon = s.match(/^(\d{4})[\s\-\/]?([A-Za-z]{3,9})$/);
+        var mw;
         if(mmYYYY){
           expiry = mmYYYY[2]+'-'+mmYYYY[1].padStart(2,'0');
         }else if(yyyyMM){
           expiry = yyyyMM[1]+'-'+yyyyMM[2].padStart(2,'0');
+        }else if(monYY && (mw=monthFromWord(monYY[1]))){
+          expiry = twoDigitYear(monYY[2])+'-'+String(mw).padStart(2,'0');
+        }else if(yyMon && (mw=monthFromWord(yyMon[2]))){
+          expiry = twoDigitYear(yyMon[1])+'-'+String(mw).padStart(2,'0');
+        }else if(monYYYY && (mw=monthFromWord(monYYYY[1]))){
+          expiry = monYYYY[2]+'-'+String(mw).padStart(2,'0');
+        }else if(yyyyMon && (mw=monthFromWord(yyyyMon[2]))){
+          expiry = yyyyMon[1]+'-'+String(mw).padStart(2,'0');
         }else{
           var d = new Date(s);
           if(!isNaN(d.getTime())) expiry = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
@@ -1381,6 +1502,7 @@
       });
     var visible = smartFilter(base, q, function(x){ return x.med.name; });
 
+    var selectedCount = Object.keys(state.stockSelected).filter(function(k){ return state.stockSelected[k]; }).length;
     var cards = visible.map(function(x){
       var med = x.med, i = x.idx;
       var rem = remainingTotal(med);
@@ -1402,6 +1524,7 @@
         '</div>';
       }).join('');
       var nearest = batches.filter(function(b){return b.remaining>0 && b.expiry;}).sort(function(a,b){return daysUntil(a.expiry)-daysUntil(b.expiry);})[0];
+      var hasAnyStock = batches.some(function(b){return b.remaining>0;});
       var nearestBadge = '';
       if(nearest){
         var d2 = daysUntil(nearest.expiry);
@@ -1409,8 +1532,11 @@
           nearestBadge = '<span class="badge '+(d2<0?'empty':'low')+'">'+(d2<0? 'Expired':'Expires '+d2+'d')+'</span>';
         }
       }
+      var expiryLine = nearest ? formatExpiry(nearest.expiry) : (hasAnyStock ? 'not set' : '—');
+      var isSelected = !!state.stockSelected[med.id];
       return (
-        '<div class="med-card" data-med="'+med.id+'">'+
+        '<div class="med-card'+(state.stockSelectMode?' selectable':'')+(isSelected?' selected':'')+'" data-med="'+med.id+'">'+
+          (state.stockSelectMode ? '<label class="med-select"><input type="checkbox" class="med-select-cb" data-med="'+med.id+'" '+(isSelected?'checked':'')+'></label>' : '')+
           '<div class="cap" style="background:'+col.fill+'"></div>'+
           '<div class="body">'+
             '<p class="name">'+(x._match && x._match.ranges.length ? highlightRanges(med.name, x._match.ranges) : escapeHtml(med.name))+'</p>'+
@@ -1418,18 +1544,21 @@
             '<div class="stat-line"><span>Total stocked</span><b>'+totalQty(med)+'</b></div>'+
             '<div class="stat-line"><span>Used so far</span><b>'+round(used)+'</b></div>'+
             '<div class="stat-line"><span>Remaining</span><b>'+rem+'</b></div>'+
+            '<div class="stat-line"><span>Nearest expiry</span><b>'+escapeHtml(expiryLine)+'</b></div>'+
             '<span class="badge '+st+'">'+icon(badgeIcon,11)+badgeText+'</span>'+nearestBadge+
             '<button class="batch-toggle" type="button">'+(isOpen?'Hide batches ▲':'Show batches ('+batches.length+') ▼')+'</button>'+
             (isOpen ? '<div class="batch-list">'+batchRows+'</div>' : '')+
-            '<div class="restock-row">'+
-              '<input type="number" min="0" step="1" class="restock-qty" placeholder="qty">'+
-              '<input type="month" class="restock-expiry" placeholder="Expiry">'+
-              '<button class="btn small restock-btn">'+icon('plus',13)+'Add batch</button>'+
-            '</div>'+
-            '<div class="actions">'+
-              '<button class="btn small edit-btn">'+icon('edit',13)+'Edit</button>'+
-              '<button class="btn small danger delete-btn">'+icon('trash',13)+'Delete</button>'+
-            '</div>'+
+            (state.stockSelectMode ? '' :
+              '<div class="restock-row">'+
+                '<input type="number" min="0" step="1" class="restock-qty" placeholder="qty">'+
+                '<input type="month" class="restock-expiry" placeholder="Expiry">'+
+                '<button class="btn small restock-btn">'+icon('plus',13)+'Add batch</button>'+
+              '</div>'+
+              '<div class="actions">'+
+                '<button class="btn small edit-btn">'+icon('edit',13)+'Edit</button>'+
+                '<button class="btn small danger delete-btn">'+icon('trash',13)+'Delete</button>'+
+              '</div>'
+            )+
           '</div>'+
         '</div>'
       );
@@ -1451,7 +1580,7 @@
           '<button class="btn" id="importExcelBtn">'+icon('upload',14)+'Import from Excel</button>'+
           '<button class="btn" id="downloadTemplateBtn">'+icon('download',14)+'Download template</button>'+
           '<input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;">'+
-          '<span style="font-size:12px;color:var(--ink-faint);">Columns: Name, Unit, Quantity, Expiry (month/year), Reorder level — missing columns are fine</span>'+
+          '<span style="font-size:12px;color:var(--ink-faint);">Columns: Name, Unit, Quantity, Expiry, Reorder level — missing columns are fine. Quantity understands mixed values like "500ml" or "10 Nos" on its own. Expiry understands "MAR-28" or "28-MAR" as March 2028, plus 01/2027, 2027-01, etc. Same medicine name on two rows = two separate expiry batches.</span>'+
         '</div>'+
       '</div>'+
       '<div class="filter-bar">'+
@@ -1466,7 +1595,15 @@
         '<button class="pill-btn'+(state.stockFilter==='empty'?' active':'')+'" data-filter="empty">Empty</button>'+
         '<button class="pill-btn'+(state.stockFilter==='unset'?' active':'')+'" data-filter="unset">Needs stock'+(needsSetupList().length ? ' ('+needsSetupList().length+')' : '')+'</button>'+
         '<button class="pill-btn'+(state.stockFilter==='expiring'?' active':'')+'" data-filter="expiring">Expiring soon</button>'+
+        '<button class="pill-btn'+(state.stockSelectMode?' active':'')+'" id="stockSelectToggle" style="margin-left:auto;">'+(state.stockSelectMode?'Cancel':icon('idCard',13)+'Select')+'</button>'+
       '</div>'+
+      (state.stockSelectMode ? (
+        '<div class="select-bar">'+
+          '<span>'+selectedCount+' selected</span>'+
+          '<button class="btn small" id="selectAllBtn" type="button">Select all ('+visible.length+')</button>'+
+          '<button class="btn small danger" id="deleteSelectedBtn" type="button" '+(selectedCount?'':'disabled')+'>'+icon('trash',13)+'Delete selected</button>'+
+        '</div>'
+      ) : '')+
       '<div class="stock-grid">'+(cards || '<div class="empty-state" style="grid-column:1/-1;">'+icon('search',30)+'<div class="t">Nothing matches</div><div class="s">Try a different filter or add a medicine above.</div></div>')+'</div>';
 
     document.getElementById('addMedBtn').addEventListener('click', function(){
@@ -1499,7 +1636,9 @@
       var ws = XLSX.utils.aoa_to_sheet([
         ['Name','Unit','Quantity','Expiry','Reorder level'],
         ['Paracetamol 500mg','tablets',300,'01/2027',50],
-        ['Amoxicillin 250mg','capsules',150,'11/2026','']
+        ['Amoxicillin 250mg','capsules',150,'11/2026',''],
+        ['Cough Syrup','','500ml','MAR-28',''],
+        ['Cough Syrup','','200ml','SEP-28','']
       ]);
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Medicines');
@@ -1527,13 +1666,58 @@
       e.target.value = '';
     });
 
-    panel.querySelectorAll('.pill-btn').forEach(function(b){
+    panel.querySelectorAll('.pill-btn[data-filter]').forEach(function(b){
       b.addEventListener('click', function(){ state.stockFilter = b.getAttribute('data-filter'); renderStock(); });
     });
+
+    document.getElementById('stockSelectToggle').addEventListener('click', function(){
+      state.stockSelectMode = !state.stockSelectMode;
+      state.stockSelected = {};
+      renderStock();
+    });
+    if(state.stockSelectMode){
+      var selAllBtn = document.getElementById('selectAllBtn');
+      if(selAllBtn) selAllBtn.addEventListener('click', function(){
+        visible.forEach(function(x){ state.stockSelected[x.med.id] = true; });
+        renderStock();
+      });
+      var delSelBtn = document.getElementById('deleteSelectedBtn');
+      if(delSelBtn) delSelBtn.addEventListener('click', function(){
+        var ids = Object.keys(state.stockSelected).filter(function(k){ return state.stockSelected[k]; });
+        if(!ids.length) return;
+        var names = state.medicines.filter(function(m){ return ids.indexOf(m.id)!==-1; }).map(function(m){ return m.name; });
+        if(confirm('Delete '+ids.length+' medicine(s)?\n\n'+names.join(', ')+'\n\nThis removes all their stock history and cannot be undone.')){
+          state.medicines = state.medicines.filter(function(m){ return ids.indexOf(m.id)===-1; });
+          state.stockSelectMode = false;
+          state.stockSelected = {};
+          persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday(); renderHome();
+        }
+      });
+      panel.querySelectorAll('.med-select-cb').forEach(function(cb){
+        cb.addEventListener('click', function(e){ e.stopPropagation(); });
+        cb.addEventListener('change', function(){
+          var id = cb.getAttribute('data-med');
+          if(cb.checked) state.stockSelected[id] = true; else delete state.stockSelected[id];
+          renderStock();
+        });
+      });
+    }
 
     panel.querySelectorAll('.med-card').forEach(function(cardEl){
       var medId = cardEl.getAttribute('data-med');
       var med = state.medicines.find(function(m){ return m.id === medId; });
+
+      if(state.stockSelectMode){
+        cardEl.addEventListener('click', function(e){
+          if(e.target.closest('.batch-toggle') || e.target.closest('.batch-list')) return;
+          var cb = cardEl.querySelector('.med-select-cb');
+          if(!cb) return;
+          if(e.target !== cb) cb.checked = !cb.checked;
+          var id = cb.getAttribute('data-med');
+          if(cb.checked) state.stockSelected[id] = true; else delete state.stockSelected[id];
+          renderStock();
+        });
+      }
 
       var toggleBtn = cardEl.querySelector('.batch-toggle');
       if(toggleBtn) toggleBtn.addEventListener('click', function(){
@@ -1551,7 +1735,8 @@
         });
       });
 
-      cardEl.querySelector('.restock-btn').addEventListener('click', function(){
+      var restockBtn = cardEl.querySelector('.restock-btn');
+      if(restockBtn) restockBtn.addEventListener('click', function(){
         var qty = Number(cardEl.querySelector('.restock-qty').value) || 0;
         var expiry = cardEl.querySelector('.restock-expiry').value || null;
         if(qty > 0){
@@ -1560,7 +1745,8 @@
         }
       });
 
-      cardEl.querySelector('.delete-btn').addEventListener('click', function(){
+      var deleteBtn = cardEl.querySelector('.delete-btn');
+      if(deleteBtn) deleteBtn.addEventListener('click', function(){
         if(confirm('Delete '+med.name+'? This removes it and all logged history.')){
           state.medicines = state.medicines.filter(function(m){ return m.id !== medId; });
           for(var d in state.logs){ delete state.logs[d][medId]; }
@@ -1568,7 +1754,8 @@
         }
       });
 
-      cardEl.querySelector('.edit-btn').addEventListener('click', function(){
+      var editBtn = cardEl.querySelector('.edit-btn');
+      if(editBtn) editBtn.addEventListener('click', function(){
         var body = cardEl.querySelector('.body');
         body.innerHTML =
           '<div class="edit-form">'+
