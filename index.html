@@ -55,6 +55,11 @@
   ::selection{background:var(--accent-soft);color:var(--accent-ink);}
   .ic{vertical-align:-3px;flex:none;}
   .app-shell{display:flex;min-height:100vh;align-items:stretch;}
+  .mobile-topbar{display:none;}
+  .mobile-drawer,.mobile-drawer-backdrop{display:none;}
+  .home-greet{margin-bottom:20px;}
+  .home-greet h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;margin:0 0 5px;}
+  .home-greet .desc{font-size:13px;color:var(--ink-soft);}
 
   .sidebar{
     width:216px;flex:none;background:rgba(255,255,255,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
@@ -172,8 +177,9 @@
   .section-title{font-size:14px;font-weight:600;margin:22px 0 8px;font-family:'Space Grotesk',sans-serif;display:flex;align-items:center;gap:6px;}
 
   /* Today */
-  .today-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);transition:box-shadow .15s ease;}
-  .today-row:hover{box-shadow:0 4px 14px rgba(27,38,32,0.07);}
+  .today-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;align-items:start;}
+  .today-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:0;box-shadow:var(--shadow);transition:box-shadow .15s ease,border-color .15s ease;}
+  .today-row:hover{box-shadow:var(--shadow-lift);border-color:var(--line-strong);}
   .today-row-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   .med-name-cell{display:flex;align-items:center;gap:9px;}
   .swatch{width:9px;height:9px;border-radius:50%;flex:none;}
@@ -283,17 +289,36 @@
 
   @media(max-width:760px){
     .app-shell{flex-direction:column;}
-    .sidebar{width:100%;flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px 12px;gap:14px;background:rgba(255,255,255,0.86);}
-    .brand{flex:none;}
-    nav.navlist{flex-direction:row;gap:4px;}
-    .nav-item{white-space:nowrap;padding:8px 12px;font-size:12.5px;}
-    .nav-item svg{width:17px;height:17px;}
-    .sidebar-foot{display:none;}
+    .sidebar{display:none;}
+    .mobile-topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:rgba(255,255,255,0.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;
+    }
+    .brand-mini{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14.5px;}
+    .brand-mini .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex:none;}
+    .brand-mini .mark svg{width:14px;height:14px;stroke:#fff;}
+    .hamburger-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line-strong);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;flex:none;}
+    .hamburger-btn span{display:block;width:16px;height:2px;border-radius:2px;background:var(--ink);transition:transform .2s ease,opacity .2s ease;}
+    .hamburger-btn.open span:nth-child(1){transform:translateY(6px) rotate(45deg);}
+    .hamburger-btn.open span:nth-child(2){opacity:0;}
+    .hamburger-btn.open span:nth-child(3){transform:translateY(-6px) rotate(-45deg);}
+    .mobile-drawer-backdrop{display:block;position:fixed;inset:0;background:rgba(15,23,42,0.32);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:35;}
+    .mobile-drawer-backdrop.show{opacity:1;pointer-events:auto;}
+    .mobile-drawer{
+      display:flex;flex-direction:column;gap:4px;position:fixed;top:0;right:0;bottom:0;width:250px;max-width:82vw;
+      background:var(--card);box-shadow:-10px 0 30px rgba(15,23,42,0.14);padding:60px 16px 20px;z-index:40;
+      transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
+    }
+    .mobile-drawer.open{transform:translateX(0);}
+    .mobile-drawer .navlist{flex-direction:column;gap:2px;}
+    .mobile-drawer .nav-item{width:100%;justify-content:flex-start;padding:11px 12px;font-size:13.5px;}
+    .mobile-drawer .profile-line{padding:0 6px 12px;}
     .content{padding:16px 12px 50px;}
     .content-head{flex-direction:column;align-items:flex-start;gap:12px;}
     .content-head .desc{font-size:12.5px;}
     .card,.stat-card,.qa-card{padding:13px 14px;}
-    .qa-grid,.stat-grid{gap:9px;}
+    .qa-grid,.stat-grid{grid-template-columns:1fr;gap:9px;}
     .qa-tag{position:static;margin-top:4px;align-self:flex-start;}
     .qa-card{flex-wrap:wrap;}
     .search-wrap .kbd-hint{display:none;}
@@ -304,6 +329,7 @@
     .op-field{min-width:120px;}
     table.sheet{font-size:12px;}
     .modal-card{width:94vw;padding:20px;}
+    .today-grid{grid-template-columns:1fr;}
   }
   @media(max-width:420px){
     .qty-stepper .entry-qty{width:36px;}
@@ -450,6 +476,41 @@
 </div>
 
 <div class="app-shell" id="appShell" style="display:none;">
+  <div class="mobile-topbar">
+    <div class="brand-mini">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l1 1 1-1a5 5 0 1 1 7 7l-7 7a1 1 0 0 1-1.4 0Z"></path></svg></div>
+      <span>Medicine Ledger</span>
+    </div>
+    <button class="hamburger-btn" id="mobileMenuBtn" type="button" aria-label="Open menu"><span></span><span></span><span></span></button>
+  </div>
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop"></div>
+  <div class="mobile-drawer" id="mobileDrawer">
+    <div class="profile-line" id="profileLineMobile"></div>
+    <nav class="navlist">
+      <button class="nav-item" data-tab="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7"></path><path d="M5 10v9.5a1 1 0 0 0 1 1h3.5v-6h5v6H18a1 1 0 0 0 1-1V10"></path></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-tab="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-tab="today">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path><path d="m8.5 14 2 2 4-4"></path></svg>
+        <span>Today</span>
+      </button>
+      <button class="nav-item" data-tab="stock">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"></path><path d="M3 7.5V16l9 4.5 9-4.5V7.5M12 12v8.5"></path></svg>
+        <span>Stock</span>
+      </button>
+      <button class="nav-item" data-tab="monthly">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 10h18M9 4v17M15 4v17"></path></svg>
+        <span>Monthly sheet</span>
+      </button>
+    </nav>
+    <button class="btn small danger" id="logoutBtnMobile" type="button" style="width:100%;margin-top:6px;">Log out</button>
+  </div>
+
   <aside class="sidebar">
     <div class="brand">
       <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l1 1 1-1a5 5 0 1 1 7 7l-7 7a1 1 0 0 1-1.4 0Z"></path></svg></div>
@@ -459,7 +520,11 @@
       </div>
     </div>
     <nav class="navlist">
-      <button class="nav-item active" data-tab="dashboard">
+      <button class="nav-item active" data-tab="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7"></path><path d="M5 10v9.5a1 1 0 0 0 1 1h3.5v-6h5v6H18a1 1 0 0 0 1-1V10"></path></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-tab="dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
         <span>Dashboard</span>
         <span class="dot" id="dashDot" style="display:none;"></span>
@@ -492,7 +557,8 @@
   </aside>
 
   <main class="content">
-    <section class="panel active" id="panel-dashboard"></section>
+    <section class="panel active" id="panel-home"></section>
+    <section class="panel" id="panel-dashboard"></section>
     <section class="panel" id="panel-today"></section>
     <section class="panel" id="panel-stock"></section>
     <section class="panel" id="panel-monthly"></section>
@@ -542,7 +608,7 @@
   var state = {
     medicines: [],
     logs: {},
-    tab: 'dashboard',
+    tab: 'home',
     todayDate: todayStr(),
     month: todayStr().slice(0,7),
     stockFilter: 'all',
@@ -869,6 +935,48 @@
 
   // ---------- DASHBOARD ----------
 
+  function renderHome(){
+    var panel = document.getElementById('panel-home');
+    var todayDoses = 0;
+    if(state.logs[state.todayDate]){
+      for(var k in state.logs[state.todayDate]) todayDoses += Number(state.logs[state.todayDate][k])||0;
+    }
+    var expCount = expiryAlerts().length;
+    var lowCount = lowStockList().length;
+
+    var hr = new Date().getHours();
+    var greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+    var whoName = (session && session.user && session.user.username) ? session.user.username : '';
+    var whereName = (session && session.user && session.user.hospitalName) ? session.user.hospitalName : '';
+
+    var cards =
+      '<div class="qa-grid">'+
+        '<button class="qa-card" type="button" data-goto="dashboard"><span class="qa-ic qa-2">'+icon('grid',18)+'</span>'+
+          '<span class="qa-body"><span class="qa-t">Dashboard</span><span class="qa-s">Stock levels, expiry & low-stock alerts at a glance</span></span>'+
+          (lowCount+expCount ? '<span class="qa-tag warn">'+(lowCount+expCount)+' need review</span>' : '')+
+        '</button>'+
+        '<button class="qa-card" type="button" data-goto="today"><span class="qa-ic qa-1">'+icon('calendar',18)+'</span>'+
+          '<span class="qa-body"><span class="qa-t">Today</span><span class="qa-s">Log doses given, patient by patient</span></span>'+
+          (todayDoses ? '<span class="qa-tag">'+round(todayDoses)+' logged</span>' : '')+
+        '</button>'+
+        '<button class="qa-card" type="button" data-goto="stock"><span class="qa-ic qa-2">'+icon('box',18)+'</span>'+
+          '<span class="qa-body"><span class="qa-t">Stock</span><span class="qa-s">Add medicines, restock batches, search inventory</span></span>'+
+        '</button>'+
+        '<button class="qa-card" type="button" data-goto="monthly"><span class="qa-ic qa-3">'+icon('grid',18)+'</span>'+
+          '<span class="qa-body"><span class="qa-t">Monthly sheet</span><span class="qa-s">Full usage grid across the month, ready to print</span></span>'+
+        '</button>'+
+      '</div>';
+
+    panel.innerHTML =
+      '<div class="home-greet"><h2>'+greeting+(whoName?', '+escapeHtml(whoName):'')+'</h2>'+
+        '<div class="desc">'+(whereName?escapeHtml(whereName)+' · ':'')+'Where would you like to go?</div></div>'+
+      cards;
+
+    panel.querySelectorAll('.qa-card').forEach(function(b){
+      b.addEventListener('click', function(){ switchTab(b.getAttribute('data-goto')); });
+    });
+  }
+
   function renderDashboard(){
     var panel = document.getElementById('panel-dashboard');
     var todayDoses = 0;
@@ -920,41 +1028,14 @@
         '<span class="pill '+lvl+'">'+icon(lvl==='danger'?'xCircle':'alertTriangle',11)+(a.status==='empty'?'Empty':'Low')+'</span></div>';
     }).join('') : '<div class="empty-state">'+icon('checkCircle',30)+'<div class="t">Fully stocked</div><div class="s">Every medicine is above its alert threshold.</div></div>';
 
-    var hr = new Date().getHours();
-    var greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-    var whoName = (session && session.user && session.user.username) ? session.user.username : '';
-    var whereName = (session && session.user && session.user.hospitalName) ? session.user.hospitalName : '';
-
-    var quickActions =
-      '<div class="qa-grid">'+
-        '<button class="qa-card" type="button" data-goto="today"><span class="qa-ic qa-1">'+icon('calendar',18)+'</span>'+
-          '<span class="qa-body"><span class="qa-t">Log today\'s doses</span><span class="qa-s">Record what was given, patient by patient</span></span>'+
-          (todayDoses ? '<span class="qa-tag">'+round(todayDoses)+' logged</span>' : '')+
-        '</button>'+
-        '<button class="qa-card" type="button" data-goto="stock"><span class="qa-ic qa-2">'+icon('box',18)+'</span>'+
-          '<span class="qa-body"><span class="qa-t">Manage stock</span><span class="qa-s">Add medicines, restock batches, search inventory</span></span>'+
-          (lowCount+expCount ? '<span class="qa-tag warn">'+(lowCount+expCount)+' need review</span>' : '')+
-        '</button>'+
-        '<button class="qa-card" type="button" data-goto="monthly"><span class="qa-ic qa-3">'+icon('grid',18)+'</span>'+
-          '<span class="qa-body"><span class="qa-t">Monthly sheet</span><span class="qa-s">Full usage grid across the month, ready to print</span></span>'+
-        '</button>'+
-      '</div>';
-
     panel.innerHTML =
-      '<div class="content-head"><div><h2>'+greeting+(whoName?', '+escapeHtml(whoName):'')+'</h2>'+
-        '<div class="desc">'+(whereName?escapeHtml(whereName)+' · ':'')+'Here\'s where things stand today</div></div>'+
-      '</div>'+
+      '<div class="content-head"><div><h2>Dashboard</h2><div class="desc">A quick read on stock and what needs attention</div></div></div>'+
       banner+
-      quickActions+
       '<div class="stat-grid">'+statCards+'</div>'+
       '<div class="grid2">'+
         '<div class="card"><div class="section-title" style="margin-top:0;">'+icon('clock',15)+'Expiry alerts</div><div class="alert-list">'+expiryRows+'</div></div>'+
         '<div class="card"><div class="section-title" style="margin-top:0;">'+icon('alertTriangle',15)+'Stock alerts</div><div class="alert-list">'+stockRows+'</div></div>'+
       '</div>';
-
-    panel.querySelectorAll('.qa-card').forEach(function(b){
-      b.addEventListener('click', function(){ switchTab(b.getAttribute('data-goto')); });
-    });
 
     if(shouldNag){
       document.getElementById('bannerBackupBtn').addEventListener('click', function(){
@@ -1024,7 +1105,7 @@
       );
     }).join('');
 
-    var emptyResults = '<div class="card"><div class="empty-state">'+icon('search',30)+'<div class="t">No match</div><div class="s">Nothing in today\'s list matches "'+escapeHtml(q)+'".</div></div></div>';
+    var emptyResults = '<div class="card" style="grid-column:1 / -1;"><div class="empty-state">'+icon('search',30)+'<div class="t">No match</div><div class="s">Nothing in today\'s list matches "'+escapeHtml(q)+'".</div></div></div>';
 
     panel.innerHTML =
       '<div class="content-head"><div><h2>Today</h2><div class="desc">Log doses — split by OP card number when more than one patient gets the same medicine</div></div>'+
@@ -1040,7 +1121,7 @@
         '</span>'+
         (q ? '<span class="result-count">'+visibleToday.length+' match'+(visibleToday.length===1?'':'es')+'</span>' : '')+
       '</div>'+
-      '<div>'+(rowsHtml || emptyResults)+'</div>';
+      '<div class="today-grid">'+(rowsHtml || emptyResults)+'</div>';
 
     document.getElementById('exportTodayBtn').addEventListener('click', function(){
       exportTodayExcel(dateVal);
@@ -1079,7 +1160,7 @@
         var entries = readEntriesFromDom();
         if(!state.logs[dateVal]) state.logs[dateVal] = {};
         if(entries.length === 0){ delete state.logs[dateVal][medId]; } else { state.logs[dateVal][medId] = entries; }
-        persist(); renderToday(); renderDashboard(); renderMonthly();
+        persist(); renderToday(); renderDashboard(); renderMonthly(); renderHome();
       }
 
       rowEl.querySelectorAll('.entry-row').forEach(function(er){
@@ -1095,7 +1176,7 @@
         var entries = (state.logs[dateVal][medId] || []).slice();
         entries.push({id: uid(), qty: 1, op: ''});
         state.logs[dateVal][medId] = entries;
-        persist(); renderToday(); renderDashboard(); renderMonthly();
+        persist(); renderToday(); renderDashboard(); renderMonthly(); renderHome();
       });
     });
   }
@@ -1271,7 +1352,7 @@
         if(hasQty) added++; else addedPartial++;
       }
     });
-    persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday();
+    persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday(); renderHome();
     closeImportPreview();
 
     var lines = [];
@@ -1401,7 +1482,7 @@
         reorder: reorderRaw === '' ? null : Number(reorderRaw),
         batches: hasQty ? [{id: uid(), qty: Number(totalRaw), expiry: expiry, addedDate: todayStr()}] : []
       });
-      persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday();
+      persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday(); renderHome();
     });
     var stockSearchEl = document.getElementById('stockSearch');
     stockSearchEl.addEventListener('input', function(e){
@@ -1465,7 +1546,7 @@
           var batchId = btn.closest('.batch-row').getAttribute('data-batch');
           if(confirm('Remove this batch from stock?')){
             med.batches = med.batches.filter(function(b){ return b.id !== batchId; });
-            persist(); renderStock(); renderDashboard();
+            persist(); renderStock(); renderDashboard(); renderHome();
           }
         });
       });
@@ -1475,7 +1556,7 @@
         var expiry = cardEl.querySelector('.restock-expiry').value || null;
         if(qty > 0){
           med.batches.push({id: uid(), qty: qty, expiry: expiry, addedDate: todayStr()});
-          persist(); renderStock(); renderDashboard();
+          persist(); renderStock(); renderDashboard(); renderHome();
         }
       });
 
@@ -1483,7 +1564,7 @@
         if(confirm('Delete '+med.name+'? This removes it and all logged history.')){
           state.medicines = state.medicines.filter(function(m){ return m.id !== medId; });
           for(var d in state.logs){ delete state.logs[d][medId]; }
-          persist(); renderStock(); renderToday(); renderMonthly(); renderDashboard();
+          persist(); renderStock(); renderToday(); renderMonthly(); renderDashboard(); renderHome();
         }
       });
 
@@ -1503,7 +1584,7 @@
           med.unit = body.querySelector('.e-unit').value.trim();
           var ro = body.querySelector('.e-reorder').value;
           med.reorder = ro === '' ? null : Number(ro);
-          persist(); renderStock(); renderToday(); renderMonthly(); renderDashboard();
+          persist(); renderStock(); renderToday(); renderMonthly(); renderDashboard(); renderHome();
         });
         body.querySelector('.e-cancel').addEventListener('click', renderStock);
       });
@@ -1696,7 +1777,7 @@
   }
 
   function renderAll(){
-    renderDashboard(); renderToday(); renderStock(); renderMonthly();
+    renderHome(); renderDashboard(); renderToday(); renderStock(); renderMonthly();
   }
   function switchTab(tab){
     state.tab = tab;
@@ -1704,8 +1785,25 @@
     document.querySelectorAll('section.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-'+tab); });
   }
   document.querySelectorAll('.nav-item').forEach(function(b){
-    b.addEventListener('click', function(){ switchTab(b.getAttribute('data-tab')); });
+    b.addEventListener('click', function(){ switchTab(b.getAttribute('data-tab')); closeMobileDrawer(); });
   });
+
+  function openMobileDrawer(){
+    document.getElementById('mobileDrawer').classList.add('open');
+    document.getElementById('mobileDrawerBackdrop').classList.add('show');
+    document.getElementById('mobileMenuBtn').classList.add('open');
+  }
+  function closeMobileDrawer(){
+    document.getElementById('mobileDrawer').classList.remove('open');
+    document.getElementById('mobileDrawerBackdrop').classList.remove('show');
+    document.getElementById('mobileMenuBtn').classList.remove('open');
+  }
+  document.getElementById('mobileMenuBtn').addEventListener('click', function(){
+    var isOpen = document.getElementById('mobileDrawer').classList.contains('open');
+    if(isOpen) closeMobileDrawer(); else openMobileDrawer();
+  });
+  document.getElementById('mobileDrawerBackdrop').addEventListener('click', closeMobileDrawer);
+  document.getElementById('logoutBtnMobile').addEventListener('click', doLogout);
 
   // Press "/" anywhere to jump straight into the current tab's smart search.
   document.addEventListener('keydown', function(e){
@@ -1863,6 +1961,8 @@
     document.getElementById('appShell').style.display = 'flex';
     document.getElementById('profileLine').innerHTML =
       '<b>'+escapeHtml(session.user.username)+'</b> · '+escapeHtml(session.user.hospitalName);
+    document.getElementById('profileLineMobile').innerHTML =
+      '<b>'+escapeHtml(session.user.username)+'</b> · '+escapeHtml(session.user.hospitalName);
     await loadState();
     renderAll();
     updateFooterMeta();
@@ -1912,14 +2012,15 @@
     btn.disabled = false; btn.textContent = originalLabel;
   });
 
-  document.getElementById('logoutBtn').addEventListener('click', function(){
+  function doLogout(){
     setToken(null);
     session = null;
     document.getElementById('appShell').style.display = 'none';
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('loginIdentifier').value = '';
     document.getElementById('loginPassword').value = '';
-  });
+  }
+  document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
   // On load, resume an existing session if a token is stored on this device —
   // this is what keeps someone logged in even after closing the app from
