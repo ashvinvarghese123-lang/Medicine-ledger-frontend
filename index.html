@@ -1293,6 +1293,46 @@
     return UNIT_ALIASES[key] || key;
   }
 
+  // Parses ONE expiry token like "MAR-28", "28-MAR", "5/28", "03/29", "01/2027" etc
+  // into "YYYY-MM", or returns null if it doesn't look like a date at all.
+  function parseExpiryString(s){
+    s = String(s||'').trim();
+    if(!s) return null;
+    var mmYYYY = s.match(/^(\d{1,2})[\/\-\s](\d{4})$/);         // "01/2027" or "01-2027"
+    var yyyyMM = s.match(/^(\d{4})[\/\-\s](\d{1,2})$/);         // "2027-01" or "2027/01"
+    var mmYY   = s.match(/^(\d{1,2})[\/\-](\d{2})$/);           // "5/28" or "03-29" — numeric month/2-digit year
+    // Pharma expiry dates are month+year only (no day) — so a bare 2-digit
+    // number next to a month name is the YEAR, not a day: "MAR-28" and
+    // "28-MAR" both mean March 2028, either order, with or without a separator.
+    var monYY   = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{2})$/);
+    var yyMon   = s.match(/^(\d{2})[\s\-\/]?([A-Za-z]{3,9})$/);
+    var monYYYY = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{4})$/);
+    var yyyyMon = s.match(/^(\d{4})[\s\-\/]?([A-Za-z]{3,9})$/);
+    var mw;
+    if(mmYYYY) return mmYYYY[2]+'-'+mmYYYY[1].padStart(2,'0');
+    if(yyyyMM) return yyyyMM[1]+'-'+yyyyMM[2].padStart(2,'0');
+    if(mmYY && Number(mmYY[1])>=1 && Number(mmYY[1])<=12) return twoDigitYear(mmYY[2])+'-'+mmYY[1].padStart(2,'0');
+    if(monYY && (mw=monthFromWord(monYY[1]))) return twoDigitYear(monYY[2])+'-'+String(mw).padStart(2,'0');
+    if(yyMon && (mw=monthFromWord(yyMon[2]))) return twoDigitYear(yyMon[1])+'-'+String(mw).padStart(2,'0');
+    if(monYYYY && (mw=monthFromWord(monYYYY[1]))) return monYYYY[2]+'-'+String(mw).padStart(2,'0');
+    if(yyyyMon && (mw=monthFromWord(yyyyMon[2]))) return yyyyMon[1]+'-'+String(mw).padStart(2,'0');
+    var d = new Date(s);
+    if(!isNaN(d.getTime())) return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    return null;
+  }
+
+  // Splits a total quantity evenly across N batches, rounded to 2dp, with any
+  // rounding remainder folded into the last share so the sum is always exact.
+  function splitQtyEvenly(total, n){
+    if(n<=1) return [round(total)];
+    var share = round(total / n);
+    var out = [];
+    var used = 0;
+    for(var i=0;i<n-1;i++){ out.push(share); used += share; }
+    out.push(round(total - used));
+    return out;
+  }
+
   function parseImportRow(row){
     var keys = Object.keys(row);
     function find(cands){
@@ -1343,48 +1383,26 @@
     }
 
     var expiryRaw = find(['expiry','expiry date','exp','exp date','expires','expiration']);
-    var expiry = null;
+    var expiries = []; // one medicine can have multiple expiry batches from a single cell
     if(expiryRaw !== undefined && expiryRaw !== ''){
       if(expiryRaw instanceof Date){
-        expiry = expiryRaw.getFullYear()+'-'+String(expiryRaw.getMonth()+1).padStart(2,'0');
+        expiries = [expiryRaw.getFullYear()+'-'+String(expiryRaw.getMonth()+1).padStart(2,'0')];
       }else if(typeof expiryRaw === 'number'){
         // Excel serial date number that wasn't auto-converted to a real Date
         try{
           var parsedSerial = XLSX.SSF.parse_date_code(expiryRaw);
-          if(parsedSerial) expiry = parsedSerial.y+'-'+String(parsedSerial.m).padStart(2,'0');
+          if(parsedSerial) expiries = [parsedSerial.y+'-'+String(parsedSerial.m).padStart(2,'0')];
         }catch(e){}
       }else{
-        var s = String(expiryRaw).trim();
-        var mmYYYY = s.match(/^(\d{1,2})[\/\-\s](\d{4})$/);         // "01/2027" or "01-2027"
-        var yyyyMM = s.match(/^(\d{4})[\/\-\s](\d{1,2})$/);         // "2027-01" or "2027/01"
-        // Pharma expiry dates are month+year only (no day) — so a bare 2-digit
-        // number next to a month name is the YEAR, not a day: "MAR-28" and
-        // "28-MAR" both mean March 2028, either order, with or without a separator.
-        var monYY   = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{2})$/);
-        var yyMon   = s.match(/^(\d{2})[\s\-\/]?([A-Za-z]{3,9})$/);
-        var monYYYY = s.match(/^([A-Za-z]{3,9})[\s\-\/]?(\d{4})$/);
-        var yyyyMon = s.match(/^(\d{4})[\s\-\/]?([A-Za-z]{3,9})$/);
-        var mw;
-        if(mmYYYY){
-          expiry = mmYYYY[2]+'-'+mmYYYY[1].padStart(2,'0');
-        }else if(yyyyMM){
-          expiry = yyyyMM[1]+'-'+yyyyMM[2].padStart(2,'0');
-        }else if(monYY && (mw=monthFromWord(monYY[1]))){
-          expiry = twoDigitYear(monYY[2])+'-'+String(mw).padStart(2,'0');
-        }else if(yyMon && (mw=monthFromWord(yyMon[2]))){
-          expiry = twoDigitYear(yyMon[1])+'-'+String(mw).padStart(2,'0');
-        }else if(monYYYY && (mw=monthFromWord(monYYYY[1]))){
-          expiry = monYYYY[2]+'-'+String(mw).padStart(2,'0');
-        }else if(yyyyMon && (mw=monthFromWord(yyyyMon[2]))){
-          expiry = yyyyMon[1]+'-'+String(mw).padStart(2,'0');
-        }else{
-          var d = new Date(s);
-          if(!isNaN(d.getTime())) expiry = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        }
+        // A cell can list more than one expiry for the same medicine, e.g.
+        // "5/28,6/28" (May 2028 and June 2028) — each becomes its own batch.
+        expiries = String(expiryRaw).split(',')
+          .map(function(part){ return parseExpiryString(part); })
+          .filter(function(v){ return v; });
       }
     }
     if(!name) return null;
-    return {name:name, unit:unit, qty:qty, expiry:expiry, reorder:reorder};
+    return {name:name, unit:unit, qty:qty, expiries:expiries, reorder:reorder};
   }
 
   var pendingImportRows = null; // set while the preview modal is open
@@ -1407,10 +1425,10 @@
     renderImportPreview(fileName);
   }
 
-  function actionLabel(action){
+  function actionLabel(action, batchCount){
     if(action === 'skip') return 'Skip — no name';
-    if(action === 'new') return 'Add new, stocked';
-    if(action === 'restock') return 'Adds a batch';
+    if(action === 'new') return batchCount>1 ? 'Add new, '+batchCount+' batches' : 'Add new, stocked';
+    if(action === 'restock') return batchCount>1 ? 'Adds '+batchCount+' batches' : 'Adds a batch';
     if(action === 'partial') return 'Add — needs stock';
     return action;
   }
@@ -1427,8 +1445,8 @@
         '<td>'+escapeHtml(p.name)+'</td>'+
         '<td>'+escapeHtml(p.unit||'—')+'</td>'+
         '<td>'+(p.qty!==null?p.qty:'—')+'</td>'+
-        '<td>'+(p.expiry?formatExpiry(p.expiry):'—')+'</td>'+
-        '<td><span class="preview-action '+row.action+'">'+actionLabel(row.action)+'</span></td>'+
+        '<td>'+(p.expiries.length?p.expiries.map(function(e){return formatExpiry(e);}).join(', '):'—')+'</td>'+
+        '<td><span class="preview-action '+row.action+'">'+actionLabel(row.action, p.expiries.length||1)+'</span></td>'+
       '</tr>';
     }).join('');
 
@@ -1473,11 +1491,21 @@
       var parsed = row.parsed;
       var existing = state.medicines.find(function(m){ return m.name.toLowerCase() === parsed.name.toLowerCase(); });
       var hasQty = parsed.qty !== null && parsed.qty > 0;
+      // One expiry -> one batch. Multiple expiries in the same cell (e.g. "5/28,6/28")
+      // -> the row's quantity is split evenly across a batch per expiry date.
+      var newBatches = [];
+      if(hasQty){
+        var expiryList = parsed.expiries.length ? parsed.expiries : [null];
+        var shares = splitQtyEvenly(parsed.qty, expiryList.length);
+        newBatches = expiryList.map(function(exp, i){
+          return {id: uid(), qty: shares[i], expiry: exp, addedDate: todayStr()};
+        });
+      }
       if(existing){
         var filledSomething = false;
-        if(hasQty){
-          existing.batches.push({id: uid(), qty: parsed.qty, expiry: parsed.expiry, addedDate: todayStr()});
-          batchesAdded++;
+        if(newBatches.length){
+          existing.batches = existing.batches.concat(newBatches);
+          batchesAdded += newBatches.length;
         }
         if(!existing.unit && parsed.unit){ existing.unit = parsed.unit; filledSomething = true; }
         if((existing.reorder===null || existing.reorder===undefined) && parsed.reorder!==null){ existing.reorder = parsed.reorder; filledSomething = true; }
@@ -1486,7 +1514,7 @@
         state.medicines.push({
           id: uid(), name: parsed.name, unit: parsed.unit,
           reorder: parsed.reorder,
-          batches: hasQty ? [{id: uid(), qty: parsed.qty, expiry: parsed.expiry, addedDate: todayStr()}] : []
+          batches: newBatches
         });
         if(hasQty) added++; else addedPartial++;
       }
@@ -1598,7 +1626,7 @@
           '<button class="btn" id="importExcelBtn">'+icon('upload',14)+'Import from Excel</button>'+
           '<button class="btn" id="downloadTemplateBtn">'+icon('download',14)+'Download template</button>'+
           '<input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;">'+
-          '<span style="font-size:12px;color:var(--ink-faint);">Columns: Name, Unit, Quantity, Expiry, Reorder level — missing columns are fine. Quantity understands mixed values like "500ml" or "10 Nos" on its own. Expiry understands "MAR-28" or "28-MAR" as March 2028, plus 01/2027, 2027-01, etc. Same medicine name on two rows = two separate expiry batches.</span>'+
+          '<span style="font-size:12px;color:var(--ink-faint);">Columns: Name, Unit, Quantity, Expiry, Reorder level — missing columns are fine. Quantity understands mixed values like "500ml" or "10 Nos" on its own. Expiry understands "MAR-28", "28-MAR", or "5/28" as month/2028, plus 01/2027, 2027-01, etc. One cell can list several expiries like "5/28,6/28" — the quantity splits evenly into separate batches. Same medicine name on two rows also creates separate batches.</span>'+
         '</div>'+
       '</div>'+
       '<div class="filter-bar">'+
@@ -1656,7 +1684,8 @@
         ['Paracetamol 500mg','tablets',300,'01/2027',50],
         ['Amoxicillin 250mg','capsules',150,'11/2026',''],
         ['Cough Syrup','','500ml','MAR-28',''],
-        ['Cough Syrup','','200ml','SEP-28','']
+        ['Cough Syrup','','200ml','SEP-28',''],
+        ['Unizif Plus','','500','5/28,6/28','']
       ]);
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Medicines');
