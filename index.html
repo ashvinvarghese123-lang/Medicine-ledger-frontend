@@ -621,6 +621,7 @@
       <div class="save-state" id="saveState"></div>
       <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
         <button class="btn small" id="notifyBtn" type="button"></button>
+        <button class="btn small" id="emailAlertsBtn" type="button"></button>
         <button class="btn small" id="backupExportBtn" type="button"></button>
         <button class="btn small" id="backupImportBtn" type="button"></button>
         <input type="file" id="backupFileInput" accept="application/json" style="display:none;">
@@ -671,7 +672,8 @@
     pill: '<rect x="4.5" y="9.5" width="15" height="5" rx="2.5" transform="rotate(-45 12 12)"/><path d="M9.3 14.7 14.7 9.3"/>',
     shieldCheck: '<path d="M12 3.5 4.5 6v6c0 4.5 3 7 7.5 8.5 4.5-1.5 7.5-4 7.5-8.5V6L12 3.5Z"/><path d="m8.8 12.2 2.2 2.2 4.2-4.4"/>',
     bell: '<path d="M6 8.5a6 6 0 0 1 12 0c0 4.5 1.5 6 2 6.5H4c.5-.5 2-2 2-6.5Z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
-    idCard: '<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><circle cx="8.3" cy="12" r="2"/><path d="M13 10.3h5M13 13.7h3.3"/>'
+    idCard: '<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><circle cx="8.3" cy="12" r="2"/><path d="M13 10.3h5M13 13.7h3.3"/>',
+    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/>'
   };
   function icon(name, size){
     size = size || 15;
@@ -2273,6 +2275,27 @@
     updateNotifyUI();
   }
 
+  function updateEmailAlertsUI(){
+    var btn = document.getElementById('emailAlertsBtn');
+    if(!session || !session.user) return;
+    var on = session.user.emailAlertsEnabled !== false;
+    btn.innerHTML = icon('mail',14) + (on ? 'Email alerts: on' : 'Email alerts: off');
+    btn.title = 'Alerts for low stock and expiring medicines go to '+session.user.email;
+  }
+  document.getElementById('emailAlertsBtn').addEventListener('click', async function(){
+    var btn = this;
+    var next = !(session.user.emailAlertsEnabled !== false);
+    btn.disabled = true;
+    try{
+      var res = await api('/api/settings/email-alerts', 'POST', { enabled: next });
+      session.user = res.user;
+      updateEmailAlertsUI();
+    }catch(err){
+      alert('Could not update email alert settings: '+(err.message||err));
+    }
+    btn.disabled = false;
+  });
+
   // ---------- AUTH ----------
 
   function showAuthError(msg){
@@ -2345,6 +2368,7 @@
     await loadState();
     renderAll();
     updateFooterMeta();
+    updateEmailAlertsUI();
   }
 
   document.getElementById('loginForm').addEventListener('submit', async function(e){
