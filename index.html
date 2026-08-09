@@ -111,7 +111,7 @@
   .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0.9;}
   .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .field-label{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);font-weight:600;display:block;margin-bottom:4px;}
-  input[type=text],input[type=number],input[type=date],input[type=month],select{
+  input[type=text],input[type=number],input[type=date],input[type=month],input[type=email],input[type=password],select{
     font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);background:var(--paper);
     border:1px solid var(--line-strong);border-radius:7px;padding:8px 10px;outline:none;
   }
@@ -372,7 +372,12 @@
       var(--paper);
   }
   #authScreen button.btn{border-radius:999px;}
-  #authScreen input[type=text],#authScreen input[type=email],#authScreen input[type=password]{border-radius:14px;}
+  #authScreen input[type=text],#authScreen input[type=email],#authScreen input[type=password]{
+    border-radius:14px;background:var(--card);border-color:var(--line);padding:11px 12px;font-size:14px;
+    transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+  }
+  #authScreen input[type=text]:hover,#authScreen input[type=email]:hover,#authScreen input[type=password]:hover{border-color:var(--line-strong);}
+  #authScreen input:focus{background:#fff;box-shadow:0 0 0 4px var(--accent-soft);}
 
   .auth-shell{
     position:relative;width:100%;max-width:960px;min-height:600px;display:flex;
@@ -409,11 +414,16 @@
   .auth-tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--paper);border-radius:999px;padding:3px;}
   .auth-tab{flex:1;text-align:center;font-size:12.5px;font-weight:500;padding:8px 4px;border-radius:999px;border:none;background:transparent;color:var(--ink-soft);cursor:pointer;transition:background .15s ease,color .15s ease;}
   .auth-tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow);}
-  .auth-field{margin-bottom:13px;}
-  .auth-field .field-label{display:block;margin-bottom:5px;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field .field-label{display:block;margin-bottom:6px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);}
   .field-icon-wrap{position:relative;}
-  .field-icon-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--ink-faint);pointer-events:none;}
-  .field-icon-wrap input{width:100%;padding-left:37px;}
+  .field-icon-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-faint);pointer-events:none;transition:color .15s ease;}
+  .field-icon-wrap:focus-within svg{color:var(--accent);}
+  .field-icon-wrap input{width:100%;padding-left:39px;}
+  #loginPassword,#createPassword{padding-right:40px;}
+  .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:none;background:transparent;border-radius:8px;color:var(--ink-faint);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s ease,color .15s ease;}
+  .pw-toggle:hover{background:var(--paper);color:var(--ink-soft);}
+  .pw-toggle svg{position:static;transform:none;width:16px;height:16px;}
   .auth-submit{width:100%;justify-content:center;margin-top:6px;position:relative;overflow:hidden;}
   .auth-submit::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(115deg,transparent,rgba(255,255,255,0.35),transparent);transform:skewX(-18deg);transition:left .5s ease;}
   .auth-submit:hover::after{left:130%;}
@@ -466,7 +476,9 @@
         </div>
         <div class="auth-field"><span class="field-label">Password</span>
           <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
-            <input type="password" id="loginPassword" autocomplete="current-password" required></div>
+            <input type="password" id="loginPassword" autocomplete="current-password" required>
+            <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </div>
         </div>
         <button class="btn primary auth-submit" type="submit">Log in</button>
       </form>
@@ -486,7 +498,9 @@
         </div>
         <div class="auth-field"><span class="field-label">Password</span>
           <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
-            <input type="password" id="createPassword" autocomplete="new-password" required></div>
+            <input type="password" id="createPassword" autocomplete="new-password" required>
+            <button type="button" class="pw-toggle" data-target="createPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </div>
         </div>
         <button class="btn primary auth-submit" type="submit">Create account</button>
       </form>
@@ -2190,6 +2204,20 @@
       document.querySelectorAll('.auth-form').forEach(function(f){ f.classList.remove('active'); });
       document.getElementById(mode+'Form').classList.add('active');
       clearAuthError();
+    });
+  });
+
+  var EYE_OPEN = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle>';
+  var EYE_OFF = '<path d="M3 3l18 18"></path><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.5 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path>';
+  document.querySelectorAll('.pw-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = document.getElementById(btn.getAttribute('data-target'));
+      if(!input) return;
+      var showing = input.type === 'password';
+      input.type = showing ? 'text' : 'password';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(showing?EYE_OFF:EYE_OPEN)+'</svg>';
+      btn.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+      input.focus();
     });
   });
 
