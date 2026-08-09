@@ -1396,7 +1396,10 @@
       }else{
         // A cell can list more than one expiry for the same medicine, e.g.
         // "5/28,6/28" (May 2028 and June 2028) — each becomes its own batch.
+        // Stray punctuation around a piece (extra slash, space, dash from a typo
+        // like " /5/28") is stripped before parsing rather than rejecting it.
         expiries = String(expiryRaw).split(',')
+          .map(function(part){ return part.trim().replace(/^[\/\-\s]+|[\/\-\s]+$/g, ''); })
           .map(function(part){ return parseExpiryString(part); })
           .filter(function(v){ return v; });
       }
