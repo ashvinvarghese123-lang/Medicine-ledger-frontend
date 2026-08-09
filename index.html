@@ -284,6 +284,10 @@
   .batch-row .bqty{font-family:'IBM Plex Mono',monospace;min-width:34px;}
   .batch-row .bexp{color:var(--ink-soft);flex:1;}
   .batch-row .bdel{margin-left:auto;}
+  .batch-row-edit{gap:6px;padding:6px 0;}
+  .batch-row-edit .be-qty{width:64px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:5px 6px;}
+  .batch-row-edit .be-expiry{flex:1;font-size:12.5px;padding:5px 6px;}
+  .batch-row-edit .be-save,.batch-row-edit .be-cancel{flex:none;}
 
   /* Monthly */
   .month-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
@@ -686,7 +690,8 @@
     stockSelected: {},
     todaySearch: '',
     todaySummaryOpen: false,
-    openBatches: {}
+    openBatches: {},
+    editingBatch: null
   };
 
   var saveTimer = null;
@@ -1539,6 +1544,7 @@
 
   function commitImport(){
     var added=0, addedPartial=0, batchesAdded=0, filledIn=0;
+    var importedMedIds = [];
     pendingImportRows.forEach(function(row){
       if(!row.checked || !row.parsed) return;
       var parsed = row.parsed;
@@ -1563,15 +1569,25 @@
         if(!existing.unit && parsed.unit){ existing.unit = parsed.unit; filledSomething = true; }
         if((existing.reorder===null || existing.reorder===undefined) && parsed.reorder!==null){ existing.reorder = parsed.reorder; filledSomething = true; }
         if(filledSomething) filledIn++;
+        importedMedIds.push(existing.id);
       }else{
+        var newId = uid();
         state.medicines.push({
-          id: uid(), name: parsed.name, unit: parsed.unit,
+          id: newId, name: parsed.name, unit: parsed.unit,
           reorder: parsed.reorder,
           batches: newBatches
         });
+        importedMedIds.push(newId);
         if(hasQty) added++; else addedPartial++;
       }
     });
+    // Auto-expand batches for anything just imported, so a wrong expiry or
+    // quantity from the sheet is visible immediately — with a pencil icon
+    // right there to fix it. Only for small imports; a 60-row sheet would
+    // otherwise turn into a wall of expanded cards instead of something useful.
+    if(importedMedIds.length <= 8){
+      importedMedIds.forEach(function(id){ state.openBatches[id] = true; });
+    }
     persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday(); renderHome();
     closeImportPreview();
 
@@ -1613,12 +1629,21 @@
       var batches = allocatedBatches(med);
       var isOpen = !!state.openBatches[med.id];
       var batchRows = batches.map(function(b){
+        if(state.editingBatch === b.id){
+          return '<div class="batch-row batch-row-edit" data-batch="'+b.id+'">'+
+            '<input type="number" min="0" step="0.5" class="be-qty" value="'+b.qty+'" placeholder="qty">'+
+            '<input type="month" class="be-expiry" value="'+(b.expiry||'')+'">'+
+            '<button class="icon-btn be-save" type="button" aria-label="Save batch" style="width:22px;height:22px;color:var(--accent-ink);">'+icon('checkCircle',13)+'</button>'+
+            '<button class="icon-btn be-cancel" type="button" aria-label="Cancel edit" style="width:22px;height:22px;">'+icon('xCircle',13)+'</button>'+
+          '</div>';
+        }
         var d = b.expiry ? daysUntil(b.expiry) : null;
         var lvl = d===null ? '' : (d<0?'danger':(d<=EXPIRY_SOON_DAYS?'warn':''));
         var expText = b.expiry ? (formatExpiry(b.expiry) + (d!==null ? (d<0? ' · expired' : ' · '+d+'d left') : '')) : 'no expiry set';
         return '<div class="batch-row" data-batch="'+b.id+'">'+
           '<span class="bqty">'+b.remaining+'/'+b.qty+'</span>'+
           '<span class="bexp'+(lvl?' pill '+lvl:'')+'" style="'+(lvl?'':'')+'">'+escapeHtml(expText)+'</span>'+
+          '<button class="icon-btn bedit" type="button" aria-label="Edit batch" style="width:22px;height:22px;">'+icon('edit',13)+'</button>'+
           '<button class="icon-btn bdel" type="button" aria-label="Delete batch" style="width:22px;height:22px;">'+icon('trash',13)+'</button>'+
         '</div>';
       }).join('');
@@ -1832,6 +1857,32 @@
             med.batches = med.batches.filter(function(b){ return b.id !== batchId; });
             persist(); renderStock(); renderDashboard(); renderHome();
           }
+        });
+      });
+
+      cardEl.querySelectorAll('.bedit').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          state.editingBatch = btn.closest('.batch-row').getAttribute('data-batch');
+          renderStock();
+        });
+      });
+      cardEl.querySelectorAll('.be-cancel').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          state.editingBatch = null;
+          renderStock();
+        });
+      });
+      cardEl.querySelectorAll('.be-save').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var row = btn.closest('.batch-row-edit');
+          var batchId = row.getAttribute('data-batch');
+          var batch = med.batches.find(function(b){ return b.id === batchId; });
+          if(!batch) return;
+          var newQty = Number(row.querySelector('.be-qty').value);
+          if(!isNaN(newQty) && newQty >= 0) batch.qty = newQty;
+          batch.expiry = row.querySelector('.be-expiry').value || null;
+          state.editingBatch = null;
+          persist(); renderStock(); renderMonthly(); renderDashboard(); renderToday(); renderHome();
         });
       });
 
