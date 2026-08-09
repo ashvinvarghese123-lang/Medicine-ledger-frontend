@@ -428,6 +428,13 @@
   .auth-submit::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(115deg,transparent,rgba(255,255,255,0.35),transparent);transform:skewX(-18deg);transition:left .5s ease;}
   .auth-submit:hover::after{left:130%;}
   .auth-error{background:var(--danger-soft);color:var(--danger);font-size:12.5px;padding:8px 10px;border-radius:12px;margin-bottom:12px;display:none;}
+  .auth-notice{background:var(--accent-soft);color:var(--accent-ink);font-size:12.5px;padding:8px 10px;border-radius:12px;margin-bottom:12px;display:none;}
+  .auth-notice.show{display:block;}
+  .auth-subtext{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 16px;}
+  .auth-forgot-link{text-align:right;margin:-6px 0 14px;font-size:12.5px;}
+  .auth-forgot-link a{color:var(--ink-soft);text-decoration:none;}
+  .auth-forgot-link a:hover{color:var(--accent-ink);text-decoration:underline;}
+  #forgotForm .auth-forgot-link{text-align:center;margin-top:12px;}
   .auth-error.show{display:block;}
   .join-code-box{background:var(--accent-soft);color:var(--accent-ink);border-radius:14px;padding:12px;text-align:center;margin-bottom:14px;}
   .join-code-box .code{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;letter-spacing:0.08em;}
@@ -468,6 +475,7 @@
         <button class="auth-tab" data-mode="create">Sign up</button>
       </div>
       <div class="auth-error" id="authError"></div>
+      <div class="auth-notice" id="authNotice"></div>
 
       <form class="auth-form active" id="loginForm">
         <div class="auth-field"><span class="field-label">Username or email</span>
@@ -480,7 +488,35 @@
             <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
           </div>
         </div>
+        <div class="auth-forgot-link"><a href="#" id="forgotPasswordLink">Forgot password?</a></div>
         <button class="btn primary auth-submit" type="submit">Log in</button>
+      </form>
+
+      <form class="auth-form" id="forgotForm">
+        <p class="auth-subtext">Enter your username or email — if it matches an account, we'll send a reset link to the email on file.</p>
+        <div class="auth-field"><span class="field-label">Username or email</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"></circle><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2"></path></svg>
+            <input type="text" id="forgotIdentifier" autocomplete="username" required></div>
+        </div>
+        <button class="btn primary auth-submit" type="submit">Send reset link</button>
+        <div class="auth-forgot-link"><a href="#" id="backToLoginFromForgot">Back to log in</a></div>
+      </form>
+
+      <form class="auth-form" id="resetForm">
+        <p class="auth-subtext">Choose a new password for your account.</p>
+        <div class="auth-field"><span class="field-label">New password</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+            <input type="password" id="resetNewPassword" autocomplete="new-password" required>
+            <button type="button" class="pw-toggle" data-target="resetNewPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </div>
+        </div>
+        <div class="auth-field"><span class="field-label">Confirm new password</span>
+          <div class="field-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+            <input type="password" id="resetConfirmPassword" autocomplete="new-password" required>
+            <button type="button" class="pw-toggle" data-target="resetConfirmPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+          </div>
+        </div>
+        <button class="btn primary auth-submit" type="submit">Set new password</button>
       </form>
 
       <form class="auth-form" id="createForm">
@@ -2192,19 +2228,46 @@
     var el = document.getElementById('authError');
     el.textContent = msg;
     el.classList.add('show');
+    document.getElementById('authNotice').classList.remove('show');
   }
   function clearAuthError(){
     document.getElementById('authError').classList.remove('show');
   }
+  function showAuthNotice(msg){
+    var el = document.getElementById('authNotice');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('authError').classList.remove('show');
+  }
+  function clearAuthNotice(){
+    document.getElementById('authNotice').classList.remove('show');
+  }
+
+  function switchAuthForm(name){
+    clearAuthError(); clearAuthNotice();
+    document.querySelectorAll('.auth-form').forEach(function(f){ f.classList.remove('active'); });
+    document.getElementById(name+'Form').classList.add('active');
+    var isTabbed = name === 'login' || name === 'create';
+    document.querySelector('.auth-tabs').style.display = isTabbed ? 'flex' : 'none';
+    if(isTabbed){
+      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-mode')===name); });
+    }
+  }
 
   document.querySelectorAll('.auth-tab').forEach(function(tab){
     tab.addEventListener('click', function(){
-      document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.toggle('active', t===tab); });
-      var mode = tab.getAttribute('data-mode');
-      document.querySelectorAll('.auth-form').forEach(function(f){ f.classList.remove('active'); });
-      document.getElementById(mode+'Form').classList.add('active');
-      clearAuthError();
+      switchAuthForm(tab.getAttribute('data-mode'));
     });
+  });
+
+  document.getElementById('forgotPasswordLink').addEventListener('click', function(e){
+    e.preventDefault();
+    document.getElementById('forgotIdentifier').value = document.getElementById('loginIdentifier').value;
+    switchAuthForm('forgot');
+  });
+  document.getElementById('backToLoginFromForgot').addEventListener('click', function(e){
+    e.preventDefault();
+    switchAuthForm('login');
   });
 
   var EYE_OPEN = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle>';
@@ -2277,6 +2340,49 @@
     btn.disabled = false; btn.textContent = originalLabel;
   });
 
+  document.getElementById('forgotForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    clearAuthError();
+    var identifier = document.getElementById('forgotIdentifier').value.trim();
+    if(!identifier) return;
+    var btn = e.target.querySelector('button[type=submit]');
+    var originalLabel = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try{
+      await api('/api/forgot-password', 'POST', { identifier: identifier });
+      showAuthNotice('If an account matches, a reset link has been sent to its email address. Check your inbox (and spam folder).');
+      e.target.reset();
+    }catch(err){
+      showAuthError(err.message || 'Something went wrong — please try again.');
+    }
+    btn.disabled = false; btn.textContent = originalLabel;
+  });
+
+  var pendingResetToken = null;
+
+  document.getElementById('resetForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    clearAuthError();
+    var pw1 = document.getElementById('resetNewPassword').value;
+    var pw2 = document.getElementById('resetConfirmPassword').value;
+    if(pw1.length < 6){ showAuthError('Password should be at least 6 characters.'); return; }
+    if(pw1 !== pw2){ showAuthError('Passwords don\'t match.'); return; }
+    if(!pendingResetToken){ showAuthError('This reset link is missing its token — request a new one.'); return; }
+    var btn = e.target.querySelector('button[type=submit]');
+    var originalLabel = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Updating…';
+    try{
+      var res = await api('/api/reset-password', 'POST', { token: pendingResetToken, newPassword: pw1 });
+      setToken(res.token);
+      session = { user: res.user };
+      pendingResetToken = null;
+      await bootApp();
+    }catch(err){
+      showAuthError(err.message || 'This reset link is invalid or has expired. Request a new one.');
+    }
+    btn.disabled = false; btn.textContent = originalLabel;
+  });
+
   function doLogout(){
     setToken(null);
     session = null;
@@ -2284,6 +2390,7 @@
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('loginIdentifier').value = '';
     document.getElementById('loginPassword').value = '';
+    switchAuthForm('login');
   }
   document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
@@ -2292,6 +2399,17 @@
   // recent apps. The token lives in localStorage and is valid for 30 days;
   // logging out (or clearing site data) is the only thing that clears it.
   (async function initAuth(){
+    var urlParams = new URLSearchParams(window.location.search);
+    var resetToken = urlParams.get('reset');
+    if(resetToken){
+      pendingResetToken = resetToken;
+      switchAuthForm('reset');
+      // Clean the token out of the URL so refreshing or sharing the link
+      // by accident doesn't leave it sitting in the address bar/history.
+      var cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+      return; // don't auto-login from a stored token — let them finish the reset
+    }
     if(!getToken()) return;
     try{
       var res = await api('/api/me', 'GET');
